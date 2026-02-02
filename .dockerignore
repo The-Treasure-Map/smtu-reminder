@@ -1,0 +1,8 @@
+target
+.git
+.env
+data
+bot.db
+*.db
+*.sqlite
+*.sqlite3
