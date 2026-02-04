@@ -143,22 +143,25 @@ fn target_from_variant(schedule_variant: &ScheduleVariant) -> ScheduleTarget {
 
 pub fn inline_buttons(schedule_variant: &ScheduleVariant, day: NaiveDate) -> InlineKeyboardMarkup {
     let today = Utc::now().naive_local().date();
-    let days_buttons = [day - Duration::days(1), today, day + Duration::days(1)].map(|day| {
-        let text = if today == day {
-            "сегодня".to_string()
-        } else {
-            day.to_string()
-        };
+    let days_buttons = [day - Duration::days(1), today, day + Duration::days(1)]
+        .into_iter()
+        .enumerate()
+        .map(|(index, day)| {
+            let text = if index == 1 {
+                "сегодня".to_string()
+            } else {
+                day.to_string()
+            };
 
-        let query = CallbackQueryData {
-            target: target_from_variant(schedule_variant),
-            date: day,
-            week_type: WeekType::for_date(day),
-        }
-        .encode();
+            let query = CallbackQueryData {
+                target: target_from_variant(schedule_variant),
+                date: day,
+                week_type: WeekType::for_date(day),
+            }
+            .encode();
 
-        InlineKeyboardButton::callback(text, query)
-    });
+            InlineKeyboardButton::callback(text, query)
+        });
 
     let week_types_buttons = [
         (WeekType::All, "обе"),
