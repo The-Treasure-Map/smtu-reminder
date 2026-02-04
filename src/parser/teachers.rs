@@ -7,9 +7,7 @@ use crate::structures::Teacher;
 
 use super::urls;
 
-pub async fn fetch_teachers(
-    client: &reqwest::Client,
-) -> anyhow::Result<Vec<crate::structures::Teacher>> {
+pub async fn fetch_teachers(client: &reqwest::Client) -> anyhow::Result<Vec<Teacher>> {
     let search_key = get_search_key(client).await?;
 
     let mut form = HashMap::new();
@@ -27,7 +25,16 @@ pub async fn fetch_teachers(
     let doc = Html::parse_document(&html);
     let selector = Selector::parse(".pt-2.pb-4 a").unwrap();
 
-    doc.select(&selector).map(process_teacher).collect()
+    let teachers = doc
+        .select(&selector)
+        .map(process_teacher)
+        .collect::<anyhow::Result<Vec<Teacher>>>()?;
+
+    if teachers.is_empty() {
+        Err(anyhow!("teachers list is empty"))
+    } else {
+        Ok(teachers)
+    }
 }
 
 fn process_teacher(teacher: ElementRef) -> anyhow::Result<Teacher> {

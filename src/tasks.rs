@@ -5,12 +5,13 @@ use teloxide::{prelude::*, types::ChatId};
 use tracing::{error, info};
 
 use crate::{
-    formatting::ScheduleFormatting, parser::schedule,
-    state::AppState, structures::WeekType,
+    formatting::ScheduleFormatting, parser::schedule, state::AppState, structures::WeekType,
 };
 
 pub async fn schedule_fetch_loop(state: Arc<AppState>) {
     let refresh_interval = Duration::from_secs(12 * 60 * 60);
+    let retry_interval = Duration::from_secs(5 * 60);
+    let mut retries = 0u32;
     loop {
         let now = Utc::now().timestamp();
         let last_updated = {
@@ -31,6 +32,7 @@ pub async fn schedule_fetch_loop(state: Arc<AppState>) {
         info!("schedule fetch loop tick");
         match schedule::fetch_all(&state.client).await {
             Ok(schedules) => {
+                retries = 0;
                 let now = Utc::now().timestamp();
                 {
                     let mut repo = state.schedule_repo.write().await;
@@ -44,11 +46,19 @@ pub async fn schedule_fetch_loop(state: Arc<AppState>) {
                 }
             }
             Err(err) => {
+                retries += 1;
                 error!("schedule fetch failed: {err}");
             }
         }
 
-        tokio::time::sleep(refresh_interval).await;
+        let sleep_duration = if retries == 0 {
+            refresh_interval
+        } else {
+            info!("retry in 5 mins");
+            retries * retry_interval
+        };
+
+        tokio::time::sleep(sleep_duration).await;
     }
 }
 
