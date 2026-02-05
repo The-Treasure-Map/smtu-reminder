@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::Context;
-use chrono::Utc;
+use chrono::{NaiveDate, Utc};
 use teloxide::{macros::BotCommands as BotCommandsMacro, prelude::*, utils::command::BotCommands};
 use tokio::sync::RwLock;
 use tracing::{error, info};
@@ -279,6 +279,21 @@ async fn handle_schedule_search(
 
 async fn send_schedule(bot: &Bot, chat_id: ChatId, schedule: &Schedule) -> anyhow::Result<()> {
     let date = Utc::now().naive_local().date();
+    let week_type = WeekType::for_date(date);
+    let text = schedule.format_for_day(date, week_type);
+
+    bot.send_message(chat_id, text)
+        .reply_markup(inline_buttons(&schedule.schedule_type, date))
+        .await?;
+    Ok(())
+}
+
+pub async fn send_schedule_date(
+    bot: &Bot,
+    chat_id: ChatId,
+    schedule: &Schedule,
+    date: NaiveDate,
+) -> anyhow::Result<()> {
     let week_type = WeekType::for_date(date);
     let text = schedule.format_for_day(date, week_type);
 

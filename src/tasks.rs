@@ -5,7 +5,7 @@ use teloxide::{prelude::*, types::ChatId};
 use tracing::{error, info};
 
 use crate::{
-    formatting::ScheduleFormatting, parser::schedule, state::AppState, structures::WeekType,
+    parser::schedule, state::AppState,
 };
 
 pub async fn schedule_fetch_loop(state: Arc<AppState>) {
@@ -93,12 +93,13 @@ pub async fn hourly_notifier_loop(bot: Bot, state: Arc<AppState>) {
                 datetime += chrono::Duration::days(1);
             }
 
-            if let Err(err) = bot
-                .send_message(
-                    ChatId(user.telegram_id),
-                    schedule.format_for_day(datetime.date(), WeekType::for_date(datetime.date())),
-                )
-                .await
+            if let Err(err) = crate::bot::commands::send_schedule_date(
+                &bot,
+                ChatId(user.telegram_id),
+                schedule,
+                datetime.date(),
+            )
+            .await
             {
                 error!("failed to send schedule remind. {err}");
             }

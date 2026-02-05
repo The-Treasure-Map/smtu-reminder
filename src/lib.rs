@@ -1,5 +1,5 @@
 mod app;
-mod bot;
+pub mod bot;
 mod db;
 mod formatting;
 pub mod parser;

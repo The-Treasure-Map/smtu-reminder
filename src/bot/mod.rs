@@ -1,5 +1,5 @@
 mod callbacks;
-mod commands;
+pub mod commands;
 
 use std::sync::Arc;
 
