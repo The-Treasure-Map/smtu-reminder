@@ -5,6 +5,10 @@ use crate::structures::{
 };
 use chrono::Weekday;
 
+const ARROW_UP_EMOJI: &'static str = "⬆️";
+const ARROW_DOWN_EMOJI: &'static str = "⬇️";
+const ARROW_COUNTER_CLOCKWISE_EMOJI: &'static str = "🔄";
+
 pub trait ScheduleFormatting {
     fn format_for_day(&self, day: impl chrono::Datelike, week_type: WeekType) -> String;
 
@@ -40,10 +44,14 @@ impl ScheduleFormatting for Schedule {
         let mut class_blocks = Vec::new();
         for class in visible_classes {
             let class_title = format_class_title(class);
+            let class_week_type = format_class_week_type(class);
             let time_range = format_time_range(&class.time.time_from, &class.time.time_to);
 
             let mut class_lines = Vec::new();
-            class_lines.push(format!("{} - {}", time_range, class_title));
+            class_lines.push(format!(
+                "{} {} {}",
+                class_week_type, time_range, class_title
+            ));
 
             match &self.schedule_type {
                 Group(_) => {
@@ -139,6 +147,13 @@ fn format_class_title(class: &crate::structures::Class) -> String {
     title
 }
 
+fn format_class_week_type(class: &crate::structures::Class) -> &'static str {
+    match class.week_type {
+        WeekType::Top => ARROW_UP_EMOJI,
+        WeekType::Bottom => ARROW_DOWN_EMOJI,
+        WeekType::All => ARROW_COUNTER_CLOCKWISE_EMOJI,
+    }
+}
 fn format_time_range(time_from: &str, time_to: &str) -> String {
     format!("{}-{}", time_from, time_to)
 }
