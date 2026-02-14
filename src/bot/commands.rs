@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::Context;
+use anyhow::{Context, anyhow};
 use chrono::{NaiveDate, Utc};
 use teloxide::{macros::BotCommands as BotCommandsMacro, prelude::*, utils::command::BotCommands};
 use tokio::sync::RwLock;
@@ -43,15 +43,7 @@ pub async fn command_endpoint(
     cmd: Command,
     state: Arc<AppState>,
 ) -> anyhow::Result<()> {
-    let Some(user) = msg.from.clone() else {
-        return Ok(());
-    };
-
-    let telegram_id = user.id.0 as i64;
-    let chat_id = msg.chat.id;
-    if let Err(err) = state.db.ensure_user(telegram_id).await {
-        error!(?err, telegram_id, chat_id = ?chat_id, "failed to ensure user");
-    }
+    let (telegram_id, chat_id) = init_user(&msg, &state).await?;
 
     let cmd_for_log = cmd.clone();
     let result: anyhow::Result<()> = match cmd {
@@ -109,6 +101,27 @@ pub async fn command_endpoint(
     Ok(())
 }
 
+async fn init_user(msg: &Message, state: &Arc<AppState>) -> anyhow::Result<(i64, ChatId)> {
+    let Some(user) = msg.from.clone() else {
+        return Err(anyhow!("Failed to get message sender"));
+    };
+
+    let telegram_id = user.id.0 as i64;
+    let chat_id = msg.chat.id;
+    if let Err(err) = state.db.ensure_user(telegram_id).await {
+        error!(?err, telegram_id, chat_id = ?chat_id, "failed to ensure user");
+    }
+    Ok((telegram_id, chat_id))
+}
+
+pub async fn message_endpoint(bot: Bot, msg: Message, state: Arc<AppState>) -> anyhow::Result<()> {
+    let text = msg
+        .text()
+        .map_or_else(|| "".to_string(), |text| text.to_string());
+    let cmd = Command::Schedule(text);
+
+    command_endpoint(bot, msg, cmd, state).await
+}
 async fn handle_remind_set(
     bot: &Bot,
     telegram_id: i64,
@@ -248,7 +261,7 @@ async fn handle_schedule_search(
         0 => {
             bot.send_message(
                 chat_id,
-                format!("По запросу \"{}\" ничего не найдено", query),
+                format!("По запросу \"{}\" расписания не найдено", query),
             )
             .await?;
         }
